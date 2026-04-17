@@ -1,8 +1,8 @@
 export const Colors = {
-  ocean:      '#0A4F7A',
-  oceanDark:  '#063554',
-  oceanLight: '#E6F3FA',
-  oceanMid:   '#2A7FAF',
+  ocean:      '#1A3059',
+  oceanDark:  '#0F1E38',
+  oceanLight: '#E8EDF5',
+  oceanMid:   '#2A4E8A',
   sand:       '#E8C97A',
   sandLight:  '#FDF6E3',
   coral:      '#E8614A',

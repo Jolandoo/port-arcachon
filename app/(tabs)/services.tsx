@@ -155,8 +155,8 @@ export default function ServicesScreen() {
 
 const styles = StyleSheet.create({
   scroll: { backgroundColor: Colors.gray50 },
-  content: { padding: Spacing.md },
-  gap: { height: Spacing.sm },
+  content: { padding: Spacing.md, paddingTop: Spacing.lg },
+  gap: { height: Spacing.md },
 
   // Tabs
   tabs: { flexDirection: 'row', backgroundColor: Colors.white, borderRadius: 12, padding: 4, marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.gray100 },

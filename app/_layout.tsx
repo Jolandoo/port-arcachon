@@ -1,12 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Stack } from 'expo-router'
 import { Colors } from '@/constants'
+import { useNotifications } from '@/hooks/useNotifications'
 
 const queryClient = new QueryClient()
+
+function NotificationsInit() {
+  useNotifications()
+  return null
+}
 
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
+      <NotificationsInit />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="portail" options={{ headerShown: false }} />

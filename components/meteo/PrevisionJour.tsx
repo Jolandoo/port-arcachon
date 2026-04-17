@@ -1,7 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import { Colors, Spacing, Typography } from '@/constants'
 import { wmoIcon, formatDateShort } from '@/utils/meteo'
+import { useSettingsStore, formatWind, formatTemp } from '@/store/settingsStore'
 import type { MeteoJour } from '@/types'
 
 interface PrevisionJourProps {
@@ -10,36 +12,45 @@ interface PrevisionJourProps {
 }
 
 export function PrevisionJour({ data, isToday = false }: PrevisionJourProps) {
+  const windUnit = useSettingsStore((s) => s.windUnit)
+  const tempUnit = useSettingsStore((s) => s.tempUnit)
   const icon = wmoIcon(data.weatherCode) as React.ComponentProps<typeof Ionicons>['name']
 
-  return (
-    <View style={[styles.card, isToday && styles.cardToday]}>
+  const inner = (
+    <>
       <Text style={[styles.day, isToday && styles.dayToday]}>
-        {isToday ? "Auj." : formatDateShort(data.date)}
+        {isToday ? 'Auj.' : formatDateShort(data.date)}
       </Text>
-      <Ionicons
-        name={icon}
-        size={26}
-        color={isToday ? Colors.white : Colors.sand}
-      />
+      <Ionicons name={icon} size={26} color={isToday ? Colors.white : Colors.sand} />
       <Text style={[styles.tempMax, isToday && styles.textWhite]}>
-        {Math.round(data.temperatureMax)}°
+        {formatTemp(data.temperatureMax, tempUnit)}
       </Text>
       <Text style={[styles.tempMin, isToday && styles.textWhiteLight]}>
-        {Math.round(data.temperatureMin)}°
+        {formatTemp(data.temperatureMin, tempUnit)}
       </Text>
       <View style={styles.wind}>
-        <Ionicons
-          name="navigate"
-          size={10}
-          color={isToday ? Colors.white : Colors.gray500}
-        />
+        <Ionicons name="navigate" size={10} color={isToday ? Colors.white : Colors.gray500} />
         <Text style={[styles.windText, isToday && styles.textWhiteLight]}>
-          {Math.round(data.windSpeedMax)}kt
+          {formatWind(data.windSpeedMax, windUnit)}
         </Text>
       </View>
-    </View>
+    </>
   )
+
+  if (isToday) {
+    return (
+      <LinearGradient
+        colors={['#1A3059', '#2A5499']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.card, styles.cardToday]}
+      >
+        {inner}
+      </LinearGradient>
+    )
+  }
+
+  return <View style={styles.card}>{inner}</View>
 }
 
 const styles = StyleSheet.create({
@@ -55,8 +66,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.gray100,
   },
   cardToday: {
-    backgroundColor: Colors.ocean,
-    borderColor: Colors.ocean,
+    borderWidth: 0,
   },
   day: {
     ...Typography.label,

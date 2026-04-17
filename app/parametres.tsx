@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, Switch, StyleSheet, Linking, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Colors, Spacing, Typography, CAPITAINERIE } from '@/constants'
+import { useSettingsStore, type WindUnit, type TempUnit, type WaveUnit } from '@/store/settingsStore'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface ToggleRowProps {
@@ -24,6 +24,21 @@ interface LinkRowProps {
   destructive?: boolean
 }
 
+interface SelectOption<T extends string> {
+  label: string
+  value: T
+}
+
+interface SelectRowProps<T extends string> {
+  icon: React.ComponentProps<typeof Ionicons>['name']
+  iconColor: string
+  label: string
+  value: T
+  options: SelectOption<T>[]
+  onChange: (v: T) => void
+  last?: boolean
+}
+
 // ── Composants lignes ─────────────────────────────────────────────────────────
 function ToggleRow({ icon, iconColor, label, sub, value, onChange, last }: ToggleRowProps) {
   return (
@@ -41,6 +56,33 @@ function ToggleRow({ icon, iconColor, label, sub, value, onChange, last }: Toggl
         trackColor={{ false: Colors.gray100, true: Colors.ocean + '80' }}
         thumbColor={value ? Colors.ocean : Colors.gray300}
       />
+    </View>
+  )
+}
+
+function SelectRow<T extends string>({ icon, iconColor, label, value, options, onChange, last }: SelectRowProps<T>) {
+  return (
+    <View style={[styles.selectRow, !last && styles.rowBorder]}>
+      <View style={styles.selectTop}>
+        <View style={[styles.rowIcon, { backgroundColor: iconColor + '18' }]}>
+          <Ionicons name={icon} size={18} color={iconColor} />
+        </View>
+        <Text style={styles.rowLabel}>{label}</Text>
+      </View>
+      <View style={styles.selectOptions}>
+        {options.map((opt) => (
+          <TouchableOpacity
+            key={opt.value}
+            style={[styles.selectOpt, opt.value === value && styles.selectOptActive]}
+            onPress={() => onChange(opt.value)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.selectOptLabel, opt.value === value && styles.selectOptLabelActive]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   )
 }
@@ -70,11 +112,16 @@ function Card({ children }: { children: React.ReactNode }) {
 
 // ── Écran ─────────────────────────────────────────────────────────────────────
 export default function ParametresScreen() {
-  const [notifMeteo,    setNotifMeteo]    = useState(true)
-  const [notifMarees,   setNotifMarees]   = useState(true)
-  const [notifActus,    setNotifActus]    = useState(false)
-  const [notifUrgences, setNotifUrgences] = useState(true)
-  const [unitsKnots,    setUnitsKnots]    = useState(true)
+  const {
+    notifMeteo,    setNotifMeteo,
+    notifMarees,   setNotifMarees,
+    notifActus,    setNotifActus,
+    notifUrgences, setNotifUrgences,
+    windUnit,      setWindUnit,
+    tempUnit,      setTempUnit,
+    waveUnit,      setWaveUnit,
+    reset,
+  } = useSettingsStore()
 
   function handleAbout() {
     Alert.alert(
@@ -90,13 +137,7 @@ export default function ParametresScreen() {
       'Toutes vos préférences seront remises à zéro.',
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Réinitialiser', style: 'destructive', onPress: () => {
-          setNotifMeteo(true)
-          setNotifMarees(true)
-          setNotifActus(false)
-          setNotifUrgences(true)
-          setUnitsKnots(true)
-        }},
+        { text: 'Réinitialiser', style: 'destructive', onPress: reset },
       ],
     )
   }
@@ -145,13 +186,40 @@ export default function ParametresScreen() {
       {/* ── Affichage ── */}
       <SectionTitle title="Affichage" />
       <Card>
-        <ToggleRow
+        <SelectRow<WindUnit>
           icon="speedometer"
           iconColor={Colors.oceanMid}
-          label="Vent en nœuds (kt)"
-          sub={unitsKnots ? 'Actif — km/h désactivé' : 'Inactif — vent en km/h'}
-          value={unitsKnots}
-          onChange={setUnitsKnots}
+          label="Unité de vent"
+          value={windUnit}
+          options={[
+            { label: 'Nœuds (kt)', value: 'kt'  },
+            { label: 'km/h',       value: 'kmh' },
+            { label: 'mph',        value: 'mph' },
+            { label: 'm/s',        value: 'ms'  },
+          ]}
+          onChange={setWindUnit}
+        />
+        <SelectRow<TempUnit>
+          icon="thermometer"
+          iconColor={Colors.coral}
+          label="Unité de température"
+          value={tempUnit}
+          options={[
+            { label: 'Celsius (°C)',    value: 'C' },
+            { label: 'Fahrenheit (°F)', value: 'F' },
+          ]}
+          onChange={setTempUnit}
+        />
+        <SelectRow<WaveUnit>
+          icon="water"
+          iconColor={Colors.oceanMid}
+          label="Hauteur des vagues"
+          value={waveUnit}
+          options={[
+            { label: 'Mètres (m)', value: 'm'  },
+            { label: 'Pieds (ft)', value: 'ft' },
+          ]}
+          onChange={setWaveUnit}
           last
         />
       </Card>
@@ -271,6 +339,14 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   rowLabel: { ...Typography.bodyMd, fontWeight: '600', color: Colors.gray900 },
   rowSub:   { ...Typography.bodySm, color: Colors.gray500, marginTop: 2 },
+
+  selectRow:   { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
+  selectTop:   { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
+  selectOptions: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap', marginBottom: Spacing.xs },
+  selectOpt:   { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: 8, borderWidth: 1.5, borderColor: Colors.gray100, backgroundColor: Colors.gray50 },
+  selectOptActive: { borderColor: Colors.ocean, backgroundColor: Colors.ocean },
+  selectOptLabel: { ...Typography.bodyMd, color: Colors.gray500, fontWeight: '500' },
+  selectOptLabelActive: { color: Colors.white, fontWeight: '700' },
 
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, marginTop: Spacing.md },
   footerText: { ...Typography.bodySm, color: Colors.gray300 },

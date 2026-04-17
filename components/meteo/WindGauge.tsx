@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { View, Text, StyleSheet, Animated } from 'react-native'
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native'
 import { Colors, Typography } from '@/constants'
 import { conditionColor, windCondition } from '@/utils/meteo'
 
@@ -8,51 +8,78 @@ interface WindGaugeProps {
   speed: number       // nœuds
 }
 
-const SIZE = 180
+const SIZE         = 180
 const ARROW_HEIGHT = SIZE * 0.38
 
 export function WindGauge({ direction, speed }: WindGaugeProps) {
-  const rotation = useRef(new Animated.Value(direction)).current
-  const condition = windCondition(speed)
+  const rotation   = useRef(new Animated.Value(0)).current
+  const hasSpun    = useRef(false)
+  const condition  = windCondition(speed)
   const arrowColor = conditionColor(condition)
 
   useEffect(() => {
-    Animated.spring(rotation, {
-      toValue: direction,
-      damping: 14,
-      stiffness: 80,
-      useNativeDriver: true,
-    }).start()
+    if (hasSpun.current) {
+      // Mises à jour ultérieures : spring direct vers la bonne direction
+      Animated.spring(rotation, {
+        toValue:   direction,
+        damping:   14,
+        stiffness: 80,
+        useNativeDriver: true,
+      }).start()
+      return
+    }
+
+    // Premier rendu : tourne sur lui-même puis se stabilise
+    hasSpun.current = true
+    rotation.setValue(0)
+
+    Animated.sequence([
+      // Phase 1 : accélération — 1 tour complet
+      Animated.timing(rotation, {
+        toValue:  360,
+        duration: 800,
+        easing:   Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      // Phase 2 : décélération vers la bonne direction + léger dépassement
+      Animated.timing(rotation, {
+        toValue:  360 + direction + 18,
+        duration: 900,
+        easing:   Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      // Phase 3 : rebond et stabilisation
+      Animated.spring(rotation, {
+        toValue:   360 + direction,
+        damping:   14,
+        stiffness: 130,
+        useNativeDriver: true,
+      }),
+    ]).start()
   }, [direction])
 
   const arrowStyle = {
     transform: [{
       rotate: rotation.interpolate({
-        inputRange: [0, 360],
-        outputRange: ['0deg', '360deg'],
+        inputRange:  [0, 7200],
+        outputRange: ['0deg', '7200deg'],
       }),
     }],
   }
 
   return (
     <View style={styles.container}>
-      {/* Cadran */}
       <View style={styles.dial}>
-        {/* Points cardinaux */}
         <Text style={[styles.cardinal, styles.cardN]}>N</Text>
         <Text style={[styles.cardinal, styles.cardS]}>S</Text>
         <Text style={[styles.cardinal, styles.cardE]}>E</Text>
         <Text style={[styles.cardinal, styles.cardO]}>O</Text>
 
-        {/* Flèche animée */}
         <Animated.View style={[styles.arrowContainer, arrowStyle] as object}>
-          {/* Pointe */}
           <View style={[styles.arrowHead, { borderBottomColor: arrowColor }]} />
-          {/* Corps */}
           <View style={[styles.arrowBody, { backgroundColor: arrowColor }]} />
         </Animated.View>
 
-        {/* Vitesse au centre */}
         <View style={styles.center}>
           <Text style={[styles.speedValue, { color: arrowColor }]}>
             {Math.round(speed)}

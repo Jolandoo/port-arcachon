@@ -1,16 +1,23 @@
-import { ScrollView, View, Text, StyleSheet } from 'react-native'
+import { ScrollView, View, Text, RefreshControl, StyleSheet } from 'react-native'
 import { Colors, Spacing, Typography } from '@/constants'
-import { LoadingState, SectionHeader } from '@/components/ui'
-import { MeteoCard, WindGauge, PrevisionJour, ProchaineMaree, TideChart } from '@/components/meteo'
+import { SectionHeader } from '@/components/ui'
+import { MeteoCard, WindGauge, PrevisionJour, ProchaineMaree, TideChart, MeteoSkeleton } from '@/components/meteo'
 import { useMeteo } from '@/hooks/useMeteo'
 import { useMarees } from '@/hooks/useMarees'
 import { getProchaineMaree } from '@/utils/marees'
 
 export default function MeteoScreen() {
-  const meteo = useMeteo()
+  const meteo  = useMeteo()
   const marees = useMarees()
 
-  if (meteo.isLoading) return <LoadingState fullScreen message="Chargement météo…" />
+  const isRefreshing = meteo.isRefetching || marees.isRefetching
+
+  function onRefresh() {
+    meteo.refetch()
+    marees.refetch()
+  }
+
+  if (meteo.isLoading) return <MeteoSkeleton />
 
   if (meteo.isError) {
     return (
@@ -27,13 +34,20 @@ export default function MeteoScreen() {
 
   const { actuelle, previsions } = meteo.data
   const prochaineMaree = marees.data ? getProchaineMaree(marees.data.jours) : null
-  const aujourdhui = marees.data?.jours[0]
 
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.ocean}
+          colors={[Colors.ocean]}
+        />
+      }
     >
       {/* Météo actuelle */}
       <SectionHeader title="Météo actuelle" />
@@ -52,11 +66,11 @@ export default function MeteoScreen() {
         </>
       )}
 
-      {/* Graphique marées du jour */}
-      {aujourdhui != null && (
+      {/* Graphique marées ±24h */}
+      {marees.data != null && (
         <>
           <View style={styles.gap} />
-          <TideChart jour={aujourdhui} />
+          <TideChart jours={marees.data.jours} />
         </>
       )}
 
@@ -79,27 +93,11 @@ export default function MeteoScreen() {
 
 const styles = StyleSheet.create({
   scroll: { backgroundColor: Colors.gray50 },
-  content: { padding: Spacing.md },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.lg,
-  },
-  errorText: {
-    ...Typography.body,
-    color: Colors.danger,
-    textAlign: 'center',
-  },
-  gaugeRow: {
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-  },
-  previsions: {
-    gap: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    paddingRight: Spacing.md,
-  },
+  content: { padding: Spacing.md, paddingTop: Spacing.lg },
+  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
+  errorText: { ...Typography.body, color: Colors.danger, textAlign: 'center' },
+  gaugeRow: { alignItems: 'center', paddingVertical: Spacing.lg },
+  previsions: { gap: Spacing.sm, paddingVertical: Spacing.xs, paddingRight: Spacing.md },
   gap: { height: Spacing.sm },
   bottomPad: { height: Spacing.xxl },
 })

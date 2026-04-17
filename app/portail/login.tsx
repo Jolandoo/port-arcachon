@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator,
+  ScrollView, ActivityIndicator, Image,
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -53,10 +53,11 @@ export default function LoginScreen() {
       >
         {/* Header logo */}
         <View style={styles.header}>
-          <View style={styles.logoBox}>
-            <Ionicons name="boat" size={40} color={Colors.ocean} />
-          </View>
-          <Text style={styles.logoTitle}>Port d'Arcachon</Text>
+          <Image
+            source={require('../../assets/images/logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.logoSub}>Espace plaisancier</Text>
         </View>
 
@@ -156,14 +157,8 @@ const styles = StyleSheet.create({
 
   // Header
   header: { alignItems: 'center', marginBottom: Spacing.xl },
-  logoBox: {
-    width: 80, height: 80, borderRadius: 24,
-    backgroundColor: Colors.oceanLight,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  logoTitle: { ...Typography.h2, color: Colors.gray900 },
-  logoSub:   { ...Typography.bodyMd, color: Colors.gray500, marginTop: 2 },
+  logo:    { width: 160, height: 120 },
+  logoSub: { ...Typography.bodyMd, color: Colors.gray500, marginTop: Spacing.xs },
 
   // Formulaire
   form: {

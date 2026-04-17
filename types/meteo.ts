@@ -7,6 +7,7 @@ export interface MeteoActuelle {
   windGusts: number
   weatherCode: number
   timestamp: string
+  waveHeight: number | null
 }
 
 export interface MeteoJour {
@@ -18,16 +19,9 @@ export interface MeteoJour {
   windGustsMax: number
 }
 
-export interface HourlyWave {
-  time: string[]
-  waveHeight: number[]
-  waveDirection: number[]
-}
-
 export interface MeteoResponse {
   actuelle: MeteoActuelle
   previsions: MeteoJour[]
-  vagues: HourlyWave
 }
 
 export interface AlerteMeteo {

@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { useState, useCallback } from 'react'
+import { ScrollView, View, Text, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Colors, Spacing, Typography } from '@/constants'
+import { FadeInView } from '@/components/ui'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Categorie = 'Tous' | 'Info' | 'Travaux' | 'Événement' | 'Sécurité'
@@ -163,19 +164,37 @@ function ActuDetail({ item, onClose }: { item: Actualite; onClose: () => void })
 
 // ── Écran ─────────────────────────────────────────────────────────────────────
 export default function ActualitesScreen() {
-  const [filtre, setFiltre]   = useState<Categorie>('Tous')
-  const [selected, setSelected] = useState<Actualite | null>(null)
+  const [filtre,    setFiltre]   = useState<Categorie>('Tous')
+  const [selected,  setSelected] = useState<Actualite | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   const filtered = filtre === 'Tous'
     ? ACTUALITES
     : ACTUALITES.filter((a) => a.categorie === filtre)
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true)
+    setTimeout(() => setRefreshing(false), 800)
+  }, [])
 
   if (selected) {
     return <ActuDetail item={selected} onClose={() => setSelected(null)} />
   }
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.ocean}
+          colors={[Colors.ocean]}
+        />
+      }
+    >
 
       {/* Filtres */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtres}>
@@ -202,9 +221,20 @@ export default function ActualitesScreen() {
         {filtered.length} {filtered.length > 1 ? 'actualités' : 'actualité'}
       </Text>
 
-      {/* Liste */}
-      {filtered.map((item) => (
-        <ActuCard key={item.id} item={item} onPress={() => setSelected(item)} />
+      {/* Empty state */}
+      {filtered.length === 0 && (
+        <View style={styles.emptyState}>
+          <Ionicons name="newspaper-outline" size={48} color={Colors.gray300} />
+          <Text style={styles.emptyTitle}>Aucune actualité</Text>
+          <Text style={styles.emptySub}>Pas d'actualité dans cette catégorie pour le moment.</Text>
+        </View>
+      )}
+
+      {/* Liste avec animations */}
+      {filtered.map((item, i) => (
+        <FadeInView key={item.id} delay={i * 60}>
+          <ActuCard item={item} onPress={() => setSelected(item)} />
+        </FadeInView>
       ))}
 
       <View style={styles.bottomPad} />
@@ -214,7 +244,7 @@ export default function ActualitesScreen() {
 
 const styles = StyleSheet.create({
   scroll: { backgroundColor: Colors.gray50 },
-  content: { padding: Spacing.md },
+  content: { padding: Spacing.md, paddingTop: Spacing.lg },
 
   // Filtres
   filtres: { gap: Spacing.xs, paddingBottom: Spacing.sm },
@@ -235,6 +265,11 @@ const styles = StyleSheet.create({
 
   // Compteur
   compteur: { ...Typography.bodySm, color: Colors.gray500, marginBottom: Spacing.sm },
+
+  // Empty state
+  emptyState: { alignItems: 'center', paddingVertical: Spacing.xxl, gap: Spacing.sm },
+  emptyTitle: { ...Typography.h3, color: Colors.gray500 },
+  emptySub:   { ...Typography.bodyMd, color: Colors.gray300, textAlign: 'center' },
 
   // Card
   card: {

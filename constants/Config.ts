@@ -4,21 +4,29 @@ export const PORT_ARCACHON = {
 } as const
 
 export const API = {
-  OPEN_METEO_BASE: 'https://api.open-meteo.com/v1/forecast',
-  SHOM_BASE: 'https://services.data.shom.fr/hdm/visu',
-  SHOM_PORT_CODE: '0222A',
-  PORT_WEBSITE: 'https://www.port-arcachon.fr',
+  OPEN_METEO_BASE:   'https://api.open-meteo.com/v1/forecast',
+  OPEN_METEO_MARINE: 'https://marine-api.open-meteo.com/v1/marine',
+  MAREE_BASE:        'https://api-maree.fr',
+  MAREE_SITE:        'arcachon',
+  PORT_WEBSITE:      'https://www.port-arcachon.fr',
 } as const
 
 export const METEO_PARAMS = {
   latitude: PORT_ARCACHON.latitude,
   longitude: PORT_ARCACHON.longitude,
   current: 'temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code',
-  hourly: 'wave_height,wave_direction',
   daily: 'weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_gusts_10m_max',
   wind_speed_unit: 'kn',
   timezone: 'Europe/Paris',
   forecast_days: 7,
+} as const
+
+export const MARINE_PARAMS = {
+  latitude:  PORT_ARCACHON.latitude,
+  longitude: PORT_ARCACHON.longitude,
+  hourly:    'wave_height,wave_direction,wave_period',
+  timezone:  'Europe/Paris',
+  forecast_days: 1,
 } as const
 
 export const WIND_THRESHOLDS = { calm: 10, moderate: 20, strong: 30, storm: 40 } as const
