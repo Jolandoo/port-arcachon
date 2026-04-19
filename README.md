@@ -1,68 +1,66 @@
 # Port d'Arcachon — Application mobile
 
-Application mobile React Native / Expo pour les plaisanciers du Port d'Arcachon.  
-Météo, marées, plan du port, services et espace plaisancier en un seul endroit.
+> Application React Native / Expo pour les plaisanciers du Port d'Arcachon.  
+> Météo temps réel, marées, plan interactif et espace plaisancier.
+
+[![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react)](https://reactnative.dev)
+[![Expo SDK](https://img.shields.io/badge/Expo-SDK_54-000020?logo=expo)](https://expo.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://www.typescriptlang.org)
 
 ---
 
-## Aperçu
+## Points techniques notables
 
-| Accueil | Météo | Marées |
-|---------|-------|--------|
-| Widget météo + marée en temps réel | Carte météo gradient, compas animé | Graphique sinusoïdal ±24h scrollable |
+### Fetch de données & state management
 
----
+- **TanStack Query v5** pour le fetching, le cache, le refetch automatique et les états de chargement
+- Deux hooks custom (`useMeteo`, `useMarees`) encapsulant les requêtes avec gestion d'erreur
+- **Zustand v5** avec middleware `persist` (AsyncStorage) pour les préférences utilisateur — sélecteurs individuels pour éviter les re-renders infinis
+- Requêtes **parallèles** : météo standard + API marine exécutées simultanément avec `Promise.all`, merge des résultats côté service
 
-## Fonctionnalités
+### Traitement des données de marées
 
-### 🌤 Météo
-- Conditions actuelles : température, vent, rafales, direction, état de la mer
-- Prévisions 7 jours
-- Compas du vent animé (spin + stabilisation au chargement)
-- Hauteur des vagues (Open-Meteo Marine API)
-- Unités configurables : nœuds / km/h / mph / m/s — °C / °F — m / ft
+- Consommation de l'API **api-maree.fr** (série temporelle toutes les 10 min sur 4 jours)
+- Algorithme de **détection des extrema locaux** (fenêtre glissante ±6 points = ±1h) pour identifier PM/BM
+- **Calcul du coefficient de marée** : `round((PM - BM) / 4.4 * 95)` basé sur l'amplitude de référence d'Arcachon, plafonné entre 20 et 120
+- **Interpolation cosinus** entre chaque extrême (oscillateur harmonique), avec points virtuels aux bornes pour couvrir la plage 0h–24h sans artefacts aux extrémités
+- Fallback sur données mockées si absence de clé API
 
-### 🌊 Marées
-- Données temps réel via **api-maree.fr** (Port d'Arcachon)
-- Calcul des coefficients de marée (ratio PM/BM, référence Arcachon 4.4 m)
-- Graphique SVG scrollable ±24h, centré sur l'heure actuelle
-- Interpolation cosinus (oscillateur harmonique) entre chaque extrême
-- Prochaine marée (haute/basse) avec compte à rebours
+### Graphique de marées
 
-### 🗺 Plan du port
-- Carte interactive centrée sur le port (react-native-maps)
-- Localisation des pontons
+- Courbe **SVG** (react-native-svg) avec remplissage dégradé, 288 points interpolés (1 point/5 min)
+- Affichage **±24h** scrollable en combinant plusieurs jours de données dans une timeline absolue
+- Centrage automatique sur l'heure actuelle via `onLayout` (évite le `setTimeout` approximatif)
+- Calcul du `nowMinutes` **timezone-safe** : `(now - midnight_local) / 60000` plutôt que `getHours()` qui peut retourner UTC
 
-### 📋 Services & Actualités
-- Informations capitainerie (VHF, téléphone, email)
-- Raccourcis rapides (plan, marées, services, urgences)
-- Actualités du port
+### Animations
 
-### 👤 Espace plaisancier
-- Connexion / déconnexion (Zustand persist)
-- Dashboard avec informations de l'anneau
-- Profil utilisateur
+- **Compas** : séquence 3 phases avec `Animated.sequence` — accélération (`Easing.in`), décélération avec dépassement (`Easing.out`), rebond spring. Interpolation sur plage `[0, 7200]deg` pour compatibilité native driver Android (extrapolate non fiable)
+- **Skeleton shimmer** : `LinearGradient` transparent → blanc → transparent translateX en boucle avec `Animated.timing`
+- **FadeInView** : fade + translateY avec `Easing.out(Easing.cubic)`, délais étagés pour effet cascade au chargement
+- **Gradients** : `expo-linear-gradient` sur les cartes météo, marées, boutons — dégradés diagonaux avec transparence
 
-### ⚙️ Paramètres
-- Unités de mesure (vent, température, vagues) via sélecteurs inline
-- Notifications push (marées, météo, alertes, quotidien) — désactivées en Expo Go
-- Persistance via AsyncStorage
+### Architecture & navigation
 
-### 🔔 Notifications push *(dev build uniquement)*
-- Rappel 30 min avant chaque marée haute
-- Alerte vent fort / tempête
-- Prévision quotidienne à 7h00
-- Navigation directe vers l'écran concerné au tap
+- **Expo Router v6** (file-based routing) : navigation par structure de fichiers `app/(tabs)/`, routes modales, layout partagé
+- **Header universel** : logo centré, compte plaisancier (initiales + anneau), icône paramètres — appliqués via `screenOptions` sur toutes les tabs
+- Composants UI réutilisables : `Card`, `GradientCard`, `Skeleton`, `FadeInView`, `SectionHeader`, `Badge`
+- Barrel exports via `index.ts` sur chaque dossier
+
+### Compatibilité Expo Go / dev build
+
+- Détection de l'environnement via `Constants.executionEnvironment` — toutes les fonctions `expo-notifications` sont des no-ops silencieux sous Expo Go (SDK 53 a supprimé les push dans Expo Go)
+- `react-native-svg` et `expo-linear-gradient` : versions exactes alignées sur le `bundledNativeModules.json` d'Expo SDK 54
 
 ---
 
-## Stack technique
+## Stack
 
 | Catégorie | Technologie |
 |-----------|-------------|
 | Framework | React Native 0.81 + Expo SDK 54 |
 | Navigation | Expo Router v6 (file-based) |
-| État global | Zustand 5 + AsyncStorage persist |
+| State | Zustand 5 + AsyncStorage persist |
 | Data fetching | TanStack Query v5 |
 | Animations | React Native Animated API |
 | Graphiques | react-native-svg 15 |
@@ -73,149 +71,57 @@ Météo, marées, plan du port, services et espace plaisancier en un seul endroi
 
 ---
 
-## APIs externes
+## APIs
 
 | API | Usage | Auth |
 |-----|-------|------|
-| [Open-Meteo](https://open-meteo.com) | Météo actuelle + prévisions 7j | Gratuite, sans clé |
-| [Open-Meteo Marine](https://marine-api.open-meteo.com) | Hauteur / direction / période des vagues | Gratuite, sans clé |
-| [api-maree.fr](https://api-maree.fr) | Données de marées Port d'Arcachon | Clé API requise |
+| [Open-Meteo](https://open-meteo.com) | Météo actuelle + prévisions 7j | Gratuite |
+| [Open-Meteo Marine](https://marine-api.open-meteo.com) | Hauteur / direction / période des vagues | Gratuite |
+| [api-maree.fr](https://api-maree.fr) | Marées Port d'Arcachon | Clé API |
 
 ---
 
 ## Installation
 
-### Prérequis
-
-- Node.js ≥ 18
-- npm ≥ 9
-- Expo Go (Android / iOS) pour le développement rapide
-- Android Studio / Xcode pour un dev build complet
-
-### Cloner et installer
-
 ```bash
-git clone https://github.com/<ton-user>/port-arcachon.git
+git clone https://github.com/<user>/port-arcachon.git
 cd port-arcachon
 npm install --legacy-peer-deps
 ```
 
-### Variables d'environnement
-
-Crée un fichier `.env` à la racine :
+Créer un `.env` à la racine :
 
 ```env
 EXPO_PUBLIC_MAREE_API_KEY=ta_cle_api_maree
 ```
 
-> Obtenir une clé sur [api-maree.fr](https://api-maree.fr) (inscription gratuite).
-
-### Lancer l'application
-
 ```bash
-# Démarrer le serveur Metro
 npx expo start
-
-# Ou directement sur Android
-npx expo start --android
-
-# Ou sur iOS
-npx expo start --ios
 ```
 
-Scanner le QR code avec **Expo Go** sur votre téléphone.
+> Les notifications push et react-native-reanimated nécessitent un dev build : `npx expo run:android`
 
 ---
 
-## Dev build (fonctionnalités complètes)
-
-Certaines fonctionnalités (notifications push, react-native-reanimated) nécessitent un dev build :
-
-```bash
-# Android
-npx expo run:android
-
-# iOS
-npx expo run:ios
-```
-
----
-
-## Structure du projet
+## Structure
 
 ```
-port-arcachon/
-├── app/
-│   ├── (tabs)/
-│   │   ├── index.tsx          # Accueil
-│   │   ├── meteo.tsx          # Météo & Marées
-│   │   ├── port.tsx           # Plan du port
-│   │   ├── services.tsx       # Services
-│   │   ├── actualites.tsx     # Actualités
-│   │   └── _layout.tsx        # Header avec logo, compte, paramètres
-│   ├── portail/
-│   │   ├── login.tsx          # Connexion plaisancier
-│   │   └── dashboard.tsx      # Espace plaisancier
-│   ├── parametres.tsx         # Paramètres
-│   ├── urgences.tsx           # Urgences
-│   └── _layout.tsx            # Root layout
-├── components/
-│   ├── meteo/
-│   │   ├── MeteoCard.tsx      # Carte météo (gradient sombre)
-│   │   ├── WindGauge.tsx      # Compas animé
-│   │   ├── TideChart.tsx      # Graphique marées SVG
-│   │   ├── PrevisionJour.tsx  # Prévision jour (scroll horizontal)
-│   │   └── ProchaineMaree.tsx # Prochaine marée (gradient)
-│   └── ui/
-│       ├── Card.tsx           # Carte blanche avec ombre
-│       ├── GradientCard.tsx   # Carte avec LinearGradient
-│       ├── FadeInView.tsx     # Animation d'entrée (fade + slide)
-│       ├── Skeleton.tsx       # Shimmer loader
-│       └── ...
-├── constants/
-│   ├── Colors.ts              # Palette (#1A3059 navy)
-│   ├── Config.ts              # URLs API, coordonnées, seuils
-│   ├── Spacing.ts             # Échelle d'espacement
-│   └── Typography.ts         # Styles de texte
-├── hooks/
-│   ├── useMeteo.ts            # TanStack Query météo
-│   ├── useMarees.ts           # TanStack Query marées
-│   └── useNotifications.ts   # Init notifications
-├── services/
-│   ├── meteoApi.ts            # Fetch Open-Meteo (météo + marine)
-│   ├── mareesApi.ts           # Fetch api-maree.fr + calcul coefficients
-│   └── notificationsService.ts # Planification notifications
-├── store/
-│   ├── settingsStore.ts       # Paramètres utilisateur (Zustand persist)
-│   └── userStore.ts           # Session plaisancier (Zustand persist)
-├── types/                     # Types TypeScript partagés
-├── utils/                     # Helpers (meteo, marees, formatage)
-└── assets/
-    └── images/logo.png        # Logo officiel Port d'Arcachon
+app/
+├── (tabs)/          # Accueil, Météo, Port, Services, Actualités
+├── portail/         # Login + Dashboard plaisancier
+├── parametres.tsx
+└── urgences.tsx
+components/
+├── meteo/           # MeteoCard, WindGauge, TideChart, PrevisionJour…
+└── ui/              # Card, GradientCard, Skeleton, FadeInView…
+services/            # meteoApi, mareesApi, notificationsService
+hooks/               # useMeteo, useMarees, useNotifications
+store/               # settingsStore, userStore (Zustand)
+constants/           # Colors, Config, Spacing, Typography
 ```
 
 ---
 
-## Design
+## Auteur
 
-- **Couleur principale** : `#1A3059` (bleu marine du logo)
-- **Gradients** : cartes météo et marées en dégradé diagonal
-- **Animations** : fade-in étagé au chargement des écrans, compas avec spin + stabilisation
-- **Graphique marées** : courbe SVG sinusoïdale (interpolation cosinus), scrollable ±24h
-- **Compatibilité** : Expo Go (développement) + dev build (production complète)
-
----
-
-## Roadmap
-
-- [ ] Coordonnées GPS réelles des pontons
-- [ ] Données actualités depuis un backend réel
-- [ ] Réservation de place / gestion d'anneau
-- [ ] Météo marine étendue (courants, houle)
-- [ ] Widget iOS/Android écran d'accueil
-
----
-
-## Licence
-
-Projet privé — Port d'Arcachon © 2026
+**Jolann** — [github.com/\<user\>](https://github.com)
